@@ -1,0 +1,2 @@
+233 nonsynchronizing supports; all 389 minimum-rank idempotent checks agree.
+17 mixtures and all seven affine tests verify the example exactly.

@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "Cite this version of the research release."
+type: software
+title: "Almost every finite Markov kernel coalesces under every grand coupling"
+authors:
+  - name: "DannyExperiments"
+version: "1.0.0"
+date-released: 2026-11-27
+doi: "10.5281/zenodo.24572905"
+url: "https://doi.org/10.5281/zenodo.24572905"
+repository-code: "https://github.com/DannyExperiments/generic-grand-coupling-coalescence"
+keywords:
+  - "Markov chains"
+  - "grand couplings"
+  - "coalescence"
+  - "coupling from the past"
+  - "random mappings"
+  - "transformation semigroups"
+  - "idempotents"
+  - "affine subspaces"
+preferred-citation:
+  type: software
+  title: "Almost every finite Markov kernel coalesces under every grand coupling"
+  authors:
+    - name: "DannyExperiments"
+  version: "1.0.0"
+  date-released: 2026-11-27
+  doi: "10.5281/zenodo.24572905"
+  url: "https://doi.org/10.5281/zenodo.24572905"
+  repository-code: "https://github.com/DannyExperiments/generic-grand-coupling-coalescence"

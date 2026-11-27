@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explore the representative-row compression</title>
+<style>
+:root{color-scheme:dark;--bg:#101b32;--panel:#162640;--edge:#415c80;--text:#f7faff;--muted:#c2cee1;--mint:#6aead7;--amber:#ffd086;--blue:#a9bdfb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,sans-serif}
+main{max-width:660px;margin:auto;padding:22px 16px 32px}
+h1{font-size:clamp(1.65rem,5.2vw,2.5rem);line-height:1.12;margin:0}
+header p,details{color:var(--muted)}header p{margin:.45rem 0 1rem}
+fieldset{border:0;margin:.3rem 0 .7rem;padding:0;min-width:0;display:flex;gap:7px;flex-wrap:wrap}
+legend,label{color:var(--muted)}legend{margin-bottom:4px}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:.15rem 0 .65rem}
+button{min-width:48px;min-height:46px;padding:7px 10px;border:1px solid var(--edge);border-radius:9px;background:#233958;color:var(--text);font:inherit;font-weight:660;cursor:pointer}
+button[aria-pressed=true]{background:var(--mint);color:var(--bg)}
+input{accent-color:var(--mint);min-height:44px;flex:1;min-width:110px}
+button:focus-visible,input:focus-visible,#chart:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.diagram,.numbers{background:var(--panel);border:1px solid var(--edge);border-radius:14px;overflow:hidden}
+#chart{display:block;width:100%;height:auto;touch-action:pan-y;cursor:grab}
+#chart:active{cursor:grabbing}#chart:focus-visible{outline-offset:-5px}
+text{text-anchor:middle;font-family:system-ui,sans-serif;fill:var(--text);font-size:19px;font-weight:700}
+.numbers{margin-top:.65rem;padding:.65rem .75rem}.numbers p{margin:.18rem 0}#columns{font-size:1.1rem;font-weight:720;color:var(--mint)}
+details{margin-top:1rem}summary{cursor:pointer;color:var(--text);font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Explore the representative-row compression</h1>
+<p>Each draw sends all three states through the same map. Choose a map to see its images. The first draw can merge different initial pairs.</p>
+</header>
+<fieldset>
+<legend>Map to display</legend>
+<button id="map0" aria-pressed="true">e</button>
+<button id="map1" aria-pressed="false">f</button>
+<button id="map2" aria-pressed="false">g</button>
+<button id="reset">Reset</button>
+</fieldset>
+<label for="mass">Probability of the constant map <output id="massValue">0</output></label>
+<div class="buttons">
+<button id="minus" aria-label="Decrease probability by one quarter">−1/4</button>
+<input type="range" id="mass" value="0" min="0" max="4" step="1">
+<button id="plus" aria-label="Increase probability by one quarter">+1/4</button>
+</div>
+<div class="diagram">
+<svg id="chart" viewBox="0 0 450 235" tabindex="0" role="img" aria-labelledby="plotTitle plotDesc">
+<title id="plotTitle">Three states mapped to their images</title>
+<desc id="plotDesc">Three colored strands, one for each original state, join its upper state to its lower image. Shared endpoints coalesce.</desc>
+<g id="plot"></g>
+</svg>
+</div>
+<div class="numbers" aria-live="polite" aria-atomic="true">
+<p id="mapState"></p>
+<p id="columns"></p>
+<p id="domain"></p>
+<p id="rank"></p>
+</div>
+<details>
+<summary>Why use only representative rows?</summary>
+<p>The idempotent e fixes representatives 1 and 2 and groups states 1 and 3 in the same fiber. On those two representatives, e and f induce a permutation after compression. Averaging their two permutation matrices gives both column sums equal to one. The constant map sends both representatives to the same fiber, so its weight changes the sums.</p>
+<p>There are six rank-two idempotents and one rank-three idempotent on three states. The explorer tests all seven from the fixed marginal probabilities. Rotate the diagram with a horizontal drag or arrow keys when it has focus.</p>
+</details>
+</main>
+<script>
+"use strict";
+const byId=id=>document.getElementById(id);
+const chart=byId("chart"),layer=byId("plot"),slider=byId("mass");
+const maps=[[0,1,0],[1,0,0],[0,0,0]], names=["e","f","g"];
+const hues=["#ffd086","#6aead7","#a9bdfb"];
+let shown=0,angle=.22,drag=null;
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const fraction=(n,d)=>{const g=gcd(n,d);return d===g?String(n/g):n/g+"/"+d/g;};
+const possible=[];
+for(let x=0;x<3;x++)for(let y=0;y<3;y++)for(let z=0;z<3;z++){
+  const candidate=[x,y,z],reps=[...new Set(candidate)].sort();
+  if(reps.length>=2&&reps.every(i=>candidate[i]===i))possible.push({candidate,reps});
+}
+function prism(x,y,name,active){
+  const shift=8*Math.cos(angle);
+  const poly=[[x-21,y-13],[x+shift,y-26],[x+21,y-13],[x-shift,y]];
+  const left=[poly[0],poly[3],[x-shift,y+13],[x-21,y]];
+  const right=[poly[3],poly[2],[x+21,y],[x-shift,y+13]];
+  const shades=active?["#44627b","#29445c","#527990"]:["#334767","#263a56","#4c5f7f"];
+  return [left,right,poly].map((p,i)=>'<polygon points="'+p.map(pair=>pair.join(",")).join(" ")+'" fill="'+shades[i]+'" stroke="#14233a"/>').join("")+
+    '<text x="'+x+'" y="'+(y-7)+'">'+name+'</text>';
+}
+function render(){
+  const w=Number(slider.value),m=mappingsMass(w),selected=maps[shown];
+  byId("massValue").textContent=fraction(w,4);
+  for(let i=0;i<3;i++)byId("map"+i).setAttribute("aria-pressed",i===shown);
+  const kernel=maps[0].map((_,i)=>maps[0].map((_,j)=>maps.reduce((sum,map,k)=>sum+(map[i]===j?m[k]:0),0)));
+  const totals=(candidate,reps)=>reps.map(j=>reps.reduce((sum,i)=>sum+kernel[i].reduce((v,k,x)=>v+(candidate[x]===j?k:0),0),0));
+  const group=totals(maps[0],[0,1]);
+  const excluded=possible.filter(({candidate,reps})=>totals(candidate,reps).some(a=>a!==8)).length;
+  byId("mapState").textContent=names[shown]+" = ("+selected.map(i=>i+1).join(", ")+") with mass "+fraction(m[shown],8)+".";
+  byId("columns").textContent="e’s column sums "+fraction(group[0],8)+" and "+fraction(group[1],8)+".";
+  byId("domain").textContent=excluded+" of 7 obstruction subspaces excluded.";
+  byId("rank").textContent=w?"This kernel coalesces under every grand coupling.":"The displayed law has eventual rank two.";
+  const offset=9*Math.sin(angle),depth=5*Math.cos(angle);
+  const from=[[95+offset,61+depth],[225+offset,61],[355+offset,61-depth]];
+  const to=[[95-offset,183-depth],[225-offset,183],[355-offset,183+depth]];
+  let result="";
+  from.forEach(([x,y],i)=>{
+    const [u,v]=to[selected[i]],bend=(i-1)*7;
+    result+='<path d="M '+x+' '+(y+6)+' Q '+((x+u)/2+bend)+' '+((y+v)/2)+' '+u+' '+(v-25)+'" fill="none" stroke="'+hues[i]+'" stroke-width="4"/>';
+  });
+  from.forEach(([x,y],i)=>{result+=prism(x,y,i+1,true);});
+  to.forEach(([x,y],i)=>{result+=prism(x,y,i+1,selected.includes(i));});
+  layer.innerHTML=result;
+}
+function mappingsMass(w){return [4-w,4-w,2*w];}
+function adjust(h){slider.value=Number(slider.value)+h;render();}
+slider.addEventListener("input",render);
+byId("minus").addEventListener("click",()=>adjust(-1));
+byId("plus").addEventListener("click",()=>adjust(1));
+for(let i=0;i<3;i++)byId("map"+i).addEventListener("click",()=>{shown=i;render();});
+byId("reset").addEventListener("click",()=>{shown=0;slider.value=0;angle=.22;render();});
+chart.addEventListener("pointerdown",e=>{drag=e.clientX;chart.setPointerCapture(e.pointerId);});
+chart.addEventListener("pointermove",e=>{if(drag!==null){angle+=(e.clientX-drag)/85;drag=e.clientX;render();}});
+chart.addEventListener("lostpointercapture",()=>{drag=null;});
+chart.addEventListener("keydown",e=>{
+  if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+  e.preventDefault();angle+=e.key==="ArrowLeft"?-.12:.12;render();
+});
+render();
+</script>
+</body>
+</html>
